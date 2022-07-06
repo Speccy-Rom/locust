@@ -38,7 +38,7 @@ class UnixKeyPoller:
 
     def poll(_self):
         dr, dw, de = select.select([sys.stdin], [], [], 0)
-        if not dr == []:
+        if dr != []:
             return sys.stdin.read(1)
         return None
 
@@ -66,26 +66,23 @@ class WindowsKeyPoller:
         if not events_peek:
             return None
 
-        if not len(events_peek) == self.cur_event_length:
+        if len(events_peek) != self.cur_event_length:
             for cur_event in events_peek[self.cur_event_length :]:
-                if cur_event.EventType == KEY_EVENT:
-                    if ord(cur_event.Char) and cur_event.KeyDown:
-                        cur_char = str(cur_event.Char)
-                        self.captured_chars.append(cur_char)
+                if (
+                    cur_event.EventType == KEY_EVENT
+                    and ord(cur_event.Char)
+                    and cur_event.KeyDown
+                ):
+                    cur_char = str(cur_event.Char)
+                    self.captured_chars.append(cur_char)
 
             self.cur_event_length = len(events_peek)
 
-        if self.captured_chars:
-            return self.captured_chars.pop(0)
-        else:
-            return None
+        return self.captured_chars.pop(0) if self.captured_chars else None
 
 
 def get_poller():
-    if os.name == "nt":
-        return WindowsKeyPoller()
-    else:
-        return UnixKeyPoller()
+    return WindowsKeyPoller() if os.name == "nt" else UnixKeyPoller()
 
 
 def input_listener(key_to_func_map: Dict[str, callable]):
@@ -98,8 +95,7 @@ def input_listener(key_to_func_map: Dict[str, callable]):
 
         try:
             while True:
-                input = poller.poll()
-                if input:
+                if input := poller.poll():
                     for key in key_to_func_map:
                         if input == key:
                             key_to_func_map[key]()

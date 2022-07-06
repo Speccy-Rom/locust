@@ -126,8 +126,7 @@ class TestLocustRunner(LocustTestCase):
 
                 @task
                 def cpu_task(self):
-                    for i in range(1000000):
-                        _ = 3 / 2
+                    _ = 3 / 2
 
             environment = Environment(user_classes=[CpuUser])
             runner = LocalRunner(environment)
@@ -873,7 +872,7 @@ class TestMasterWorkerRunners(LocustTestCase):
             wait_time = constant(0.1)
 
             @task
-            def my_task(l):
+            def my_task(self):
                 pass
 
         with mock.patch("locust.runners.WORKER_REPORT_INTERVAL", new=0.3):
@@ -1358,10 +1357,7 @@ class TestMasterWorkerRunners(LocustTestCase):
         class TestShape(LoadTestShape):
             def tick(self):
                 run_time = self.get_run_time()
-                if run_time < 10:
-                    return 4, 4
-                else:
-                    return None
+                return (4, 4) if run_time < 10 else None
 
         with mock.patch("locust.runners.WORKER_REPORT_INTERVAL", new=0.3):
             master_env = Environment(user_classes=[TestUser], shape_class=TestShape())
@@ -1685,8 +1681,13 @@ class TestMasterRunner(LocustTestCase):
             self.assertEqual(1, len(self.mocked_log.warning))
             self.assertEqual(2, len(master.clients))
             server.mocked_send(
-                Message("client_ready", __version__ + "1", "difference_in_patch_version_should_not_warn")
+                Message(
+                    "client_ready",
+                    f"{__version__}1",
+                    "difference_in_patch_version_should_not_warn",
+                )
             )
+
             self.assertEqual(3, len(master.clients))
             self.assertEqual(1, len(self.mocked_log.warning))
 

@@ -691,8 +691,8 @@ class TestWebLocustClass(WebserverTestCase):
             host = "http://127.0.0.1:%i" % self.port
 
             @task()
-            def t1(l):
-                l.client.get("/ultra_fast", name="new name!")
+            def t1(self):
+                self.client.get("/ultra_fast", name="new name!")
 
         my_locust = MyUser(self.environment)
         my_locust.t1()

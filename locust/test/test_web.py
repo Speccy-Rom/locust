@@ -78,7 +78,7 @@ class TestWebUI(LocustTestCase, _HeaderCheckMixin):
             "user_count": ["-u", "100"],
             "spawn_rate": ["-r", "10.0"],
         }
-        for html_name_to_test in html_to_option.keys():
+        for html_name_to_test in html_to_option:
             # Test that setting each spawn option individually populates the corresponding field in the html, and none of the others
             self.environment.parsed_options = parse_options(html_to_option[html_name_to_test])
 
@@ -87,7 +87,7 @@ class TestWebUI(LocustTestCase, _HeaderCheckMixin):
 
             d = pq(response.content.decode("utf-8"))
 
-            for html_name in html_to_option.keys():
+            for html_name in html_to_option:
                 start_value = d(f".start [name={html_name}]").attr("value")
                 edit_value = d(f".edit [name={html_name}]").attr("value")
                 if html_name_to_test == html_name:
@@ -217,10 +217,7 @@ class TestWebUI(LocustTestCase, _HeaderCheckMixin):
         self._check_csv_headers(response.headers, "exceptions")
 
         reader = csv.reader(StringIO(response.text))
-        rows = []
-        for row in reader:
-            rows.append(row)
-
+        rows = list(reader)
         self.assertEqual(2, len(rows))
         self.assertEqual("Test exception", rows[1][1])
         self.assertEqual(2, int(rows[1][0]), "Exception count should be 2")
@@ -516,7 +513,7 @@ class TestWebUIFullHistory(LocustTestCase, _HeaderCheckMixin):
         self.assertIn("Content-Length", response.headers)
 
         reader = csv.reader(StringIO(response.text))
-        rows = [r for r in reader]
+        rows = list(reader)
 
         self.assertEqual(4, len(rows))
         self.assertEqual("Timestamp", rows[0][0])

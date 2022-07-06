@@ -1594,11 +1594,14 @@ class TestRampDownUsersToZero(unittest.TestCase):
 
 class TestRampUpThenDownThenUp(unittest.TestCase):
     def test_ramp_up_then_down_then_up(self):
+        all_user_classes = [User1, User2, User3, User4, User5]
+
         for user1_weight, user2_weight, user3_weight, user4_weight, user5_weight in [
             (1, 1, 1, 1, 1),
             (1, 2, 3, 4, 5),
             (1, 3, 5, 7, 9),
         ]:
+
 
             class User1(User):
                 weight = user1_weight
@@ -1614,8 +1617,6 @@ class TestRampUpThenDownThenUp(unittest.TestCase):
 
             class User5(User):
                 weight = user5_weight
-
-            all_user_classes = [User1, User2, User3, User4, User5]
 
             for number_of_user_classes in range(1, len(all_user_classes) + 1):
                 user_classes = all_user_classes[:number_of_user_classes]
@@ -2184,10 +2185,9 @@ class TestLargeScale(unittest.TestCase):
             self.assertLessEqual(
                 max(user_count_on_workers) - min(user_count_on_workers),
                 1,
-                "One or more workers have too much users compared to the other workers when user count is {}".format(
-                    _user_count(dispatch_users)
-                ),
+                f"One or more workers have too much users compared to the other workers when user count is {_user_count(dispatch_users)}",
             )
+
 
         for i, dispatch_users in enumerate(all_dispatched_users):
             aggregated_dispatched_users = _aggregate_dispatched_users(dispatch_users)
@@ -2195,17 +2195,11 @@ class TestLargeScale(unittest.TestCase):
                 target_relative_weight = user_class.weight / sum(map(attrgetter("weight"), self.user_classes))
                 relative_weight = aggregated_dispatched_users[user_class.__name__] / _user_count(dispatch_users)
                 error_percent = 100 * (relative_weight - target_relative_weight) / target_relative_weight
-                if i == len(all_dispatched_users) - 1:
-                    # We want the distribution to be as good as possible at the end of the ramp-up
-                    tol = 0.5
-                else:
-                    tol = 15
+                tol = 0.5 if i == len(all_dispatched_users) - 1 else 15
                 self.assertLessEqual(
                     error_percent,
                     tol,
-                    "Distribution for user class {} is off by more than {}% when user count is {}".format(
-                        user_class, tol, _user_count(dispatch_users)
-                    ),
+                    f"Distribution for user class {user_class} is off by more than {tol}% when user count is {_user_count(dispatch_users)}",
                 )
 
     def test_ramp_down_from_100_000_to_0_users_with_50_user_classes_and_1000_workers_and_5000_spawn_rate(self):
@@ -2243,24 +2237,21 @@ class TestLargeScale(unittest.TestCase):
             self.assertLessEqual(
                 max(user_count_on_workers) - min(user_count_on_workers),
                 1,
-                "One or more workers have too much users compared to the other workers when user count is {}".format(
-                    _user_count(dispatch_users)
-                ),
+                f"One or more workers have too much users compared to the other workers when user count is {_user_count(dispatch_users)}",
             )
 
+
+        tol = 15
         for dispatch_users in all_dispatched_users[:-1]:
             aggregated_dispatched_users = _aggregate_dispatched_users(dispatch_users)
             for user_class in self.user_classes:
                 target_relative_weight = user_class.weight / sum(map(attrgetter("weight"), self.user_classes))
                 relative_weight = aggregated_dispatched_users[user_class.__name__] / _user_count(dispatch_users)
                 error_percent = 100 * (relative_weight - target_relative_weight) / target_relative_weight
-                tol = 15
                 self.assertLessEqual(
                     error_percent,
                     tol,
-                    "Distribution for user class {} is off by more than {}% when user count is {}".format(
-                        user_class, tol, _user_count(dispatch_users)
-                    ),
+                    f"Distribution for user class {user_class} is off by more than {tol}% when user count is {_user_count(dispatch_users)}",
                 )
 
 
@@ -2388,6 +2379,7 @@ class TestRampingMiscellaneous(unittest.TestCase):
 
 class TestRemoveWorker(unittest.TestCase):
     def test_remove_worker_during_ramp_up(self):
+
         class User1(User):
             weight = 1
 
@@ -2439,8 +2431,10 @@ class TestRemoveWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 2, "User2": 2, "User3": 2})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 3)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 3)
@@ -2457,6 +2451,7 @@ class TestRemoveWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 4)
 
     def test_remove_two_workers_during_ramp_up(self):
+
         class User1(User):
             weight = 1
 
@@ -2509,8 +2504,10 @@ class TestRemoveWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 2, "User2": 2, "User3": 2})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 6)
 
@@ -2525,6 +2522,7 @@ class TestRemoveWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 9)
 
     def test_remove_worker_between_two_ramp_ups(self):
+
         class User1(User):
             weight = 1
 
@@ -2563,8 +2561,10 @@ class TestRemoveWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 3, "User2": 3, "User3": 3})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 5)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 4)
@@ -2599,6 +2599,7 @@ class TestRemoveWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 9)
 
     def test_remove_two_workers_between_two_ramp_ups(self):
+
         class User1(User):
             weight = 1
 
@@ -2638,8 +2639,10 @@ class TestRemoveWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 3, "User2": 3, "User3": 3})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 9)
 
@@ -2670,6 +2673,7 @@ class TestRemoveWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 18)
 
     def test_remove_worker_during_ramp_down(self):
+
         class User1(User):
             weight = 1
 
@@ -2725,8 +2729,10 @@ class TestRemoveWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 4, "User2": 4, "User3": 4})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 6)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 6)
@@ -2743,6 +2749,7 @@ class TestRemoveWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 4)
 
     def test_remove_two_workers_during_ramp_down(self):
+
         class User1(User):
             weight = 1
 
@@ -2799,8 +2806,10 @@ class TestRemoveWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 4, "User2": 4, "User3": 4})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 12)
 
@@ -2852,6 +2861,7 @@ class TestRemoveWorker(unittest.TestCase):
 
 class TestAddWorker(unittest.TestCase):
     def test_add_worker_during_ramp_up(self):
+
         class User1(User):
             weight = 1
 
@@ -2901,8 +2911,10 @@ class TestAddWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 2, "User2": 2, "User3": 2})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 2)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[1].id), 2)
@@ -2921,6 +2933,7 @@ class TestAddWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 3)
 
     def test_add_two_workers_during_ramp_up(self):
+
         class User1(User):
             weight = 1
 
@@ -2969,8 +2982,10 @@ class TestAddWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 2, "User2": 2, "User3": 2})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 2)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[1].id), 2)
@@ -2989,6 +3004,7 @@ class TestAddWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 3)
 
     def test_add_worker_between_two_ramp_ups(self):
+
         class User1(User):
             weight = 1
 
@@ -3027,8 +3043,10 @@ class TestAddWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 3, "User2": 3, "User3": 3})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 3)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[1].id), 3)
@@ -3067,6 +3085,7 @@ class TestAddWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 6)
 
     def test_add_two_workers_between_two_ramp_ups(self):
+
         class User1(User):
             weight = 1
 
@@ -3106,8 +3125,10 @@ class TestAddWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 3, "User2": 3, "User3": 3})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 3)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[1].id), 3)
@@ -3146,6 +3167,7 @@ class TestAddWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 6)
 
     def test_add_worker_during_ramp_down(self):
+
         class User1(User):
             weight = 1
 
@@ -3199,8 +3221,10 @@ class TestAddWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 4, "User2": 4, "User3": 4})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 4)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[1].id), 4)
@@ -3219,6 +3243,7 @@ class TestAddWorker(unittest.TestCase):
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[2].id), 3)
 
     def test_add_two_workers_during_ramp_down(self):
+
         class User1(User):
             weight = 1
 
@@ -3271,8 +3296,10 @@ class TestAddWorker(unittest.TestCase):
         dispatched_users = next(users_dispatcher)
         delta = time.perf_counter() - ts
         self.assertTrue(
-            0 <= delta <= _TOLERANCE, "Expected re-balance dispatch to be instantaneous but got {}s".format(delta)
+            0 <= delta <= _TOLERANCE,
+            f"Expected re-balance dispatch to be instantaneous but got {delta}s",
         )
+
         self.assertDictEqual(_aggregate_dispatched_users(dispatched_users), {"User1": 4, "User2": 4, "User3": 4})
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[0].id), 4)
         self.assertEqual(_user_count_on_worker(dispatched_users, worker_nodes[1].id), 4)

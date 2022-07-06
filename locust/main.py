@@ -90,9 +90,11 @@ def load_locustfile(path):
     # Return our two-tuple
     user_classes = {name: value for name, value in vars(imported).items() if is_user_class(value)}
 
-    # Find shape class, if any, return it
-    shape_classes = [value for name, value in vars(imported).items() if is_shape_class(value)]
-    if shape_classes:
+    if shape_classes := [
+        value
+        for name, value in vars(imported).items()
+        if is_shape_class(value)
+    ]:
         shape_class = shape_classes[0]()
     else:
         shape_class = None
@@ -323,7 +325,7 @@ def main():
             logger.info("--run-time limit reached, stopping test")
             runner.stop()
             if options.autoquit != -1:
-                logger.debug("Autoquit time limit set to %s seconds" % options.autoquit)
+                logger.debug(f"Autoquit time limit set to {options.autoquit} seconds")
                 time.sleep(options.autoquit)
                 logger.info("--autoquit time reached, shutting down")
                 runner.quit()
@@ -385,7 +387,7 @@ def main():
                 headless_master_greenlet.link_exception(greenlet_exception_handler)
 
         if options.run_time:
-            logger.info("Run time limit set to %s seconds" % options.run_time)
+            logger.info(f"Run time limit set to {options.run_time} seconds")
             spawn_run_time_quit_greenlet()
         elif not options.worker and not environment.shape_class:
             logger.info("No run time limit set, use CTRL+C to interrupt")
@@ -443,7 +445,7 @@ def main():
         else:
             code = 0
 
-        logger.info("Shutting down (exit code %s), bye." % code)
+        logger.info(f"Shutting down (exit code {code}), bye.")
         if stats_printer_greenlet is not None:
             stats_printer_greenlet.kill(block=False)
         if headless_master_greenlet is not None:

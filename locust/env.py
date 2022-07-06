@@ -89,11 +89,7 @@ class Environment:
         catch_exceptions=True,
         parsed_options=None,
     ):
-        if events:
-            self.events = events
-        else:
-            self.events = Events()
-
+        self.events = events or Events()
         self.locustfile = locustfile
         self.user_classes = user_classes or []
         self.shape_class = shape_class
@@ -111,11 +107,11 @@ class Environment:
         self._remove_user_classes_with_weight_zero()
 
         # Validate there's no class with the same name but in different modules
-        if len(set(user_class.__name__ for user_class in self.user_classes)) != len(self.user_classes):
+        if len({user_class.__name__ for user_class in self.user_classes}) != len(
+            self.user_classes
+        ):
             raise ValueError(
-                "The following user classes have the same class name: {}".format(
-                    ", ".join(map(methodcaller("fullname"), self.user_classes))
-                )
+                f'The following user classes have the same class name: {", ".join(map(methodcaller("fullname"), self.user_classes))}'
             )
 
     def _create_runner(
@@ -125,7 +121,10 @@ class Environment:
         **kwargs,
     ) -> RunnerType:
         if self.runner is not None:
-            raise RunnerAlreadyExistsError("Environment.runner already exists (%s)" % self.runner)
+            raise RunnerAlreadyExistsError(
+                f"Environment.runner already exists ({self.runner})"
+            )
+
         self.runner: RunnerType = runner_class(self, *args, **kwargs)
 
         # Attach the runner to the shape class so that the shape class can access user count state
@@ -228,7 +227,7 @@ class Environment:
             # Preserve previous behaviour that allowed no user classes to be specified.
             return
         filtered_user_classes = [user_class for user_class in self.user_classes if user_class.weight > 0]
-        if len(filtered_user_classes) == 0:
+        if not filtered_user_classes:
             # TODO: Better exception than `ValueError`?
             raise ValueError("There are no users with weight > 0.")
         self.user_classes[:] = filtered_user_classes

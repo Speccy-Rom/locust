@@ -71,31 +71,28 @@ class TestLoggingOptions(LocustTestCase):
             ).decode("utf-8")
 
         self.assertIn(
-            "%s/INFO/locust.main: Run time limit set to 1 seconds" % socket.gethostname(),
+            f"{socket.gethostname()}/INFO/locust.main: Run time limit set to 1 seconds",
             output,
         )
+
         self.assertIn(
-            "%s/INFO/locust.main: --run-time limit reached. Stopping Locust" % socket.gethostname(),
+            f"{socket.gethostname()}/INFO/locust.main: --run-time limit reached. Stopping Locust",
             output,
         )
+
         self.assertIn(
-            "%s/INFO/locust.main: Shutting down (exit code 0), bye." % socket.gethostname(),
+            f"{socket.gethostname()}/INFO/locust.main: Shutting down (exit code 0), bye.",
             output,
         )
+
         self.assertIn(
             "\nrunning my_task\n",
             output,
         )
         # check that custom message of root logger is also printed
-        self.assertIn(
-            "%s/INFO/root: custom log message" % socket.gethostname(),
-            output,
-        )
+        self.assertIn(f"{socket.gethostname()}/INFO/root: custom log message", output)
         # check that custom message of custom_logger is also printed
-        self.assertIn(
-            "%s/INFO/custom_logger: test" % socket.gethostname(),
-            output,
-        )
+        self.assertIn(f"{socket.gethostname()}/INFO/custom_logger: test", output)
 
     def test_skip_logging(self):
         with temporary_file(
@@ -183,19 +180,21 @@ class TestLoggingOptions(LocustTestCase):
 
         # check that log messages goes into file
         self.assertIn(
-            "%s/INFO/locust.main: Run time limit set to 1 seconds" % socket.gethostname(),
+            f"{socket.gethostname()}/INFO/locust.main: Run time limit set to 1 seconds",
             log_content,
         )
+
         self.assertIn(
-            "%s/INFO/locust.main: --run-time limit reached. Stopping Locust" % socket.gethostname(),
+            f"{socket.gethostname()}/INFO/locust.main: --run-time limit reached. Stopping Locust",
             log_content,
         )
+
         self.assertIn(
-            "%s/INFO/locust.main: Shutting down (exit code 0), bye." % socket.gethostname(),
+            f"{socket.gethostname()}/INFO/locust.main: Shutting down (exit code 0), bye.",
             log_content,
         )
+
         # check that message of custom logger also went into log file
         self.assertIn(
-            "%s/INFO/root: custom log message" % socket.gethostname(),
-            log_content,
+            f"{socket.gethostname()}/INFO/root: custom log message", log_content
         )

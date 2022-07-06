@@ -15,12 +15,12 @@ from flask import Blueprint, render_template, jsonify, make_response
 
 class MyTaskSet(TaskSet):
     @task(2)
-    def index(l):
-        l.client.get("/")
+    def index(self):
+        self.client.get("/")
 
     @task(1)
-    def stats(l):
-        l.client.get("/stats/requests")
+    def stats(self):
+        self.client.get("/stats/requests")
 
 
 class WebsiteUser(HttpUser):
@@ -109,14 +109,15 @@ def locust_init(environment, **kwargs):
             ]
 
             if stats:
-                for url, inner_stats in stats.items():
-                    rows.append(
-                        '"%s",%.2f'
-                        % (
-                            url,
-                            inner_stats["content-length"],
-                        )
+                rows.extend(
+                    '"%s",%.2f'
+                    % (
+                        url,
+                        inner_stats["content-length"],
                     )
+                    for url, inner_stats in stats.items()
+                )
+
             return "\n".join(rows)
 
         # register our new routes and extended UI with the Locust web UI

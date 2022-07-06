@@ -55,24 +55,26 @@ def find_locustfile(locustfile):
     names = [locustfile]
     # Create .py version if necessary
     if not names[0].endswith(".py"):
-        names.append(names[0] + ".py")
+        names.append(f"{names[0]}.py")
     # Does the name contain path elements?
     if os.path.dirname(names[0]):
         # If so, expand home-directory markers and test for existence
         for name in names:
             expanded = os.path.expanduser(name)
-            if os.path.exists(expanded):
-                if name.endswith(".py") or _is_package(expanded):
-                    return os.path.abspath(expanded)
+            if os.path.exists(expanded) and (
+                name.endswith(".py") or _is_package(expanded)
+            ):
+                return os.path.abspath(expanded)
     else:
         # Otherwise, start in cwd and work downwards towards filesystem root
         path = os.path.abspath(".")
         while True:
             for name in names:
                 joined = os.path.join(path, name)
-                if os.path.exists(joined):
-                    if name.endswith(".py") or _is_package(joined):
-                        return os.path.abspath(joined)
+                if os.path.exists(joined) and (
+                    name.endswith(".py") or _is_package(joined)
+                ):
+                    return os.path.abspath(joined)
             parent_path = os.path.dirname(path)
             if parent_path == path:
                 # we've reached the root path which has been checked this iteration
@@ -442,8 +444,9 @@ Only the LOCUSTFILE (-f option) needs to be specified when starting a Worker, si
         "-V",
         action="version",
         help="Show program's version number and exit",
-        version="%(prog)s {}".format(version),
+        version=f"%(prog)s {version}",
     )
+
     other_group.add_argument(
         "--exit-code-on-error",
         type=int,
@@ -519,5 +522,8 @@ def ui_extra_args_dict(args=None) -> Dict[str, str]:
     parser = get_parser()
     all_args = vars(parser.parse_args(args))
 
-    extra_args = {k: v for k, v in all_args.items() if k not in locust_args and k in parser.args_included_in_web_ui}
-    return extra_args
+    return {
+        k: v
+        for k, v in all_args.items()
+        if k not in locust_args and k in parser.args_included_in_web_ui
+    }
