@@ -11,12 +11,12 @@ from locust import events
 
 class MyTaskSet(TaskSet):
     @task(2)
-    def index(l):
-        l.client.get("/")
+    def index(self):
+        self.client.get("/")
 
     @task(1)
-    def stats(l):
-        l.client.get("/stats/requests")
+    def stats(self):
+        self.client.get("/stats/requests")
 
 
 class WebsiteUser(HttpUser):

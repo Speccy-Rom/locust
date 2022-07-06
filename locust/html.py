@@ -22,8 +22,7 @@ def get_html_report(environment, show_download_link=True):
     start_ts = stats.start_time
     start_time = datetime.datetime.utcfromtimestamp(start_ts).strftime("%Y-%m-%d %H:%M:%S")
 
-    end_ts = stats.last_request_timestamp
-    if end_ts:
+    if end_ts := stats.last_request_timestamp:
         end_time = datetime.datetime.utcfromtimestamp(end_ts).strftime("%Y-%m-%d %H:%M:%S")
     else:
         end_time = start_time
@@ -32,7 +31,7 @@ def get_html_report(environment, show_download_link=True):
     if environment.host:
         host = environment.host
     elif environment.runner.user_classes:
-        all_hosts = set([l.host for l in environment.runner.user_classes])
+        all_hosts = {l.host for l in environment.runner.user_classes}
         if len(all_hosts) == 1:
             host = list(all_hosts)[0]
 
@@ -48,7 +47,7 @@ def get_html_report(environment, show_download_link=True):
     js_files = ["jquery-1.11.3.min.js", "echarts.common.min.js", "vintage.js", "chart.js", "tasks.js"]
     for js_file in js_files:
         path = os.path.join(os.path.dirname(__file__), "static", js_file)
-        static_js.append("// " + js_file)
+        static_js.append(f"// {js_file}")
         with open(path, encoding="utf8") as f:
             static_js.append(f.read())
         static_js.extend(["", ""])
@@ -57,7 +56,7 @@ def get_html_report(environment, show_download_link=True):
     css_files = ["tables.css"]
     for css_file in css_files:
         path = os.path.join(os.path.dirname(__file__), "static", "css", css_file)
-        static_css.append("/* " + css_file + " */")
+        static_css.append(f"/* {css_file} */")
         with open(path, encoding="utf8") as f:
             static_css.append(f.read())
         static_css.extend(["", ""])
@@ -67,7 +66,7 @@ def get_html_report(environment, show_download_link=True):
         "total": get_task_ratio_dict(environment.user_classes, total=True),
     }
 
-    res = render_template(
+    return render_template(
         "report.html",
         int=int,
         round=round,
@@ -84,5 +83,3 @@ def get_html_report(environment, show_download_link=True):
         locustfile=environment.locustfile,
         tasks=escape(dumps(task_data)),
     )
-
-    return res

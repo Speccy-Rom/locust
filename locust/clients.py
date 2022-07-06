@@ -75,7 +75,7 @@ class HttpSession(requests.Session):
         if absolute_http_url_regexp.match(path):
             return path
         else:
-            return "%s%s" % (self.base_url, path)
+            return f"{self.base_url}{path}"
 
     @contextmanager
     def rename_request(self, name: str):
@@ -145,47 +145,43 @@ class HttpSession(requests.Session):
             "exception": None,
             "start_time": start_time,
             "url": request_after_redirect.url,
+            "response_length": int(response.headers.get("content-length") or 0)
+            if kwargs.get("stream", False)
+            else len(response.content or b""),
         }
 
-        # get the length of the content, but if the argument stream is set to True, we take
-        # the size from the content-length header, in order to not trigger fetching of the body
-        if kwargs.get("stream", False):
-            request_meta["response_length"] = int(response.headers.get("content-length") or 0)
-        else:
-            request_meta["response_length"] = len(response.content or b"")
 
         if catch_response:
             return ResponseContextManager(response, request_event=self.request_event, request_meta=request_meta)
-        else:
-            if name:
-                # Since we use the Exception message when grouping failures, in order to not get
-                # multiple failure entries for different URLs for the same name argument, we need
-                # to temporarily override the response.url attribute
-                orig_url = response.url
-                response.url = name
+        if name:
+            # Since we use the Exception message when grouping failures, in order to not get
+            # multiple failure entries for different URLs for the same name argument, we need
+            # to temporarily override the response.url attribute
+            orig_url = response.url
+            response.url = name
 
-            try:
-                response.raise_for_status()
-            except RequestException as e:
-                while (
-                    isinstance(
-                        e,
-                        (
-                            requests.exceptions.ConnectionError,
-                            requests.packages.urllib3.exceptions.ProtocolError,
-                            requests.packages.urllib3.exceptions.MaxRetryError,
-                            requests.packages.urllib3.exceptions.NewConnectionError,
-                        ),
-                    )
-                    and e.__context__  # Not sure if the above exceptions can ever be the lowest level, but it is good to be sure
-                ):
-                    e = e.__context__
-                request_meta["exception"] = e
+        try:
+            response.raise_for_status()
+        except RequestException as e:
+            while (
+                isinstance(
+                    e,
+                    (
+                        requests.exceptions.ConnectionError,
+                        requests.packages.urllib3.exceptions.ProtocolError,
+                        requests.packages.urllib3.exceptions.MaxRetryError,
+                        requests.packages.urllib3.exceptions.NewConnectionError,
+                    ),
+                )
+                and e.__context__  # Not sure if the above exceptions can ever be the lowest level, but it is good to be sure
+            ):
+                e = e.__context__
+            request_meta["exception"] = e
 
-            self.request_event.fire(**request_meta)
-            if name:
-                response.url = orig_url
-            return response
+        self.request_event.fire(**request_meta)
+        if name:
+            response.url = orig_url
+        return response
 
     def _send_request_safe_mode(self, method, url, **kwargs):
         """
@@ -238,20 +234,17 @@ class ResponseContextManager(LocustResponse):
             return exc is None
 
         if exc:
-            if isinstance(value, ResponseError):
-                self.request_meta["exception"] = value
-                self._report_request()
-            else:
+            if not isinstance(value, ResponseError):
                 # we want other unknown exceptions to be raised
                 return False
+            self.request_meta["exception"] = value
         else:
             try:
                 self.raise_for_status()
             except requests.exceptions.RequestException as e:
                 self.request_meta["exception"] = e
 
-            self._report_request()
-
+        self._report_request()
         return True
 
     def _report_request(self, exc=None):

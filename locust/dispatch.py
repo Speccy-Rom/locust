@@ -62,7 +62,7 @@ class UsersDispatcher(Iterator):
 
         self._user_classes = sorted(user_classes, key=attrgetter("__name__"))
 
-        assert len(user_classes) > 0
+        assert user_classes
         assert len(set(self._user_classes)) == len(self._user_classes)
 
         self._target_user_count = None
@@ -189,7 +189,7 @@ class UsersDispatcher(Iterator):
         :param worker_node: The worker node to remove.
         """
         self._worker_nodes = [w for w in self._worker_nodes if w.id != worker_node.id]
-        if len(self._worker_nodes) == 0:
+        if not self._worker_nodes:
             # TODO: Test this
             return
         self._prepare_rebalance()
@@ -286,12 +286,10 @@ class UsersDispatcher(Iterator):
 
         active_users = []
 
-        user_count = 0
-        while user_count < target_user_count:
+        for _ in range(target_user_count):
             user = next(user_gen)
             worker_node = next(worker_gen)
             users_on_workers[worker_node.id][user] += 1
-            user_count += 1
             active_users.append((worker_node, user))
 
         return users_on_workers, user_gen, worker_gen, active_users

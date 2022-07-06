@@ -26,9 +26,9 @@ print("1. Parsing locustfile, happens before anything else")
 
 # If you want to get something over HTTP at this time you can use `requests` directly:
 global_test_data = requests.post(
-    "https://postman-echo.com/post",
-    data="global_test_data_" + timestring(),
+    "https://postman-echo.com/post", data=f"global_test_data_{timestring()}"
 ).json()["data"]
+
 
 test_run_specific_data = None
 
@@ -52,7 +52,7 @@ def _(environment, **_kwargs):
     if not isinstance(environment.runner, MasterRunner):
         test_run_specific_data = requests.post(
             "https://postman-echo.com/post",
-            data="test-run-specific_" + timestring(),
+            data=f"test-run-specific_{timestring()}",
         ).json()["data"]
 
 
@@ -70,8 +70,7 @@ class MyUser(HttpUser):
         # This is a good place to fetch user-specific test data. It is executed once per User
         # If you do not want the request logged, you can replace self.client.<method> with requests.<method>
         self.user_specific_testdata = self.client.post(
-            "https://postman-echo.com/post",
-            data="user-specific_" + timestring(),
+            "https://postman-echo.com/post", data=f"user-specific_{timestring()}"
         ).json()["data"]
 
     @task
@@ -84,8 +83,9 @@ class MyUser(HttpUser):
         # If every iteration is meant to use new test data this is the most common way to do it
         task_run_specific_testdata = self.client.post(
             "https://postman-echo.com/post",
-            data="task_run_specific_testdata_" + timestring(),
+            data=f"task_run_specific_testdata_{timestring()}",
         ).json()["data"]
+
         self.client.get(f"/get?{task_run_specific_testdata}")
 
     def on_stop(self):

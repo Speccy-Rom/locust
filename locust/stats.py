@@ -107,8 +107,7 @@ def diff_response_time_dicts(latest, old):
     """
     new = {}
     for t in latest:
-        diff = latest[t] - old.get(t, 0)
-        if diff:
+        if diff := latest[t] - old.get(t, 0):
             new[t] = diff
     return new
 
@@ -200,7 +199,8 @@ class RequestStats:
         return [
             self.entries[key].get_stripped_report()
             for key in self.entries.keys()
-            if not (self.entries[key].num_requests == 0 and self.entries[key].num_failures == 0)
+            if self.entries[key].num_requests != 0
+            or self.entries[key].num_failures != 0
         ]
 
     def serialize_errors(self):
@@ -360,10 +360,7 @@ class StatsEntry:
         try:
             return float(self.num_failures) / self.num_requests
         except ZeroDivisionError:
-            if self.num_failures > 0:
-                return 1.0
-            else:
-                return 0.0
+            return 1.0 if self.num_failures > 0 else 0.0
 
     @property
     def avg_response_time(self):
@@ -539,16 +536,19 @@ class StatsEntry:
         else:
             rps = self.total_rps
             fail_per_sec = self.total_fail_per_sec
-        return (" %-" + str(STATS_NAME_WIDTH) + "s %7d %12s  | %7d %7d %7d %7d  | %7.2f %7.2f") % (
-            (self.method and self.method + " " or "") + self.name,
-            self.num_requests,
-            "%d(%.2f%%)" % (self.num_failures, self.fail_ratio * 100),
-            self.avg_response_time,
-            self.min_response_time or 0,
-            self.max_response_time,
-            self.median_response_time or 0,
-            rps or 0,
-            fail_per_sec or 0,
+        return (
+            f" %-{str(STATS_NAME_WIDTH)}s %7d %12s  | %7d %7d %7d %7d  | %7.2f %7.2f"
+            % (
+                (self.method and f"{self.method} " or "") + self.name,
+                self.num_requests,
+                "%d(%.2f%%)" % (self.num_failures, self.fail_ratio * 100),
+                self.avg_response_time,
+                self.min_response_time or 0,
+                self.max_response_time,
+                self.median_response_time or 0,
+                rps or 0,
+                fail_per_sec or 0,
+            )
         )
 
     def __str__(self):
@@ -581,19 +581,19 @@ class StatsEntry:
         # when trying to fetch the cached response_times. We construct this list in such a way
         # that it's ordered by preference by starting to add t-10, then t-11, t-9, t-12, t-8,
         # and so on
-        acceptable_timestamps = []
-        acceptable_timestamps.append(t - CURRENT_RESPONSE_TIME_PERCENTILE_WINDOW)
+        acceptable_timestamps = [t - CURRENT_RESPONSE_TIME_PERCENTILE_WINDOW]
         for i in range(1, 9):
             acceptable_timestamps.append(t - CURRENT_RESPONSE_TIME_PERCENTILE_WINDOW - i)
             acceptable_timestamps.append(t - CURRENT_RESPONSE_TIME_PERCENTILE_WINDOW + i)
 
-        cached = None
-        for ts in acceptable_timestamps:
-            if ts in self.response_times_cache:
-                cached = self.response_times_cache[ts]
-                break
-
-        if cached:
+        if cached := next(
+            (
+                self.response_times_cache[ts]
+                for ts in acceptable_timestamps
+                if ts in self.response_times_cache
+            ),
+            None,
+        ):
             # If we found an acceptable cached response times, we'll calculate a new response
             # times dict of the last 10 seconds (approximately) by diffing it with the current
             # total response times. Then we'll use that to calculate a response time percentile
@@ -614,7 +614,9 @@ class StatsEntry:
 
         return tpl % (
             (self.method, self.name)
-            + tuple([self.get_response_time_percentile(p) for p in PERCENTILES_TO_REPORT])
+            + tuple(
+                self.get_response_time_percentile(p) for p in PERCENTILES_TO_REPORT
+            )
             + (self.num_requests,)
         )
 
@@ -632,7 +634,7 @@ class StatsEntry:
 
         if len(self.response_times_cache) > cache_size:
             # only keep the latest 20 response_times dicts
-            for i in range(len(self.response_times_cache) - cache_size):
+            for _ in range(len(self.response_times_cache) - cache_size):
                 self.response_times_cache.popitem(last=False)
 
 
@@ -678,7 +680,7 @@ class StatsError:
             # standalone, unwrapped exception
             unwrapped_error = repr(error)
 
-        return "%s %s: %s" % (self.method, self.name, unwrapped_error)
+        return f"{self.method} {self.name}: {unwrapped_error}"
 
     def to_dict(self):
         return {
@@ -738,9 +740,22 @@ def setup_distributed_stats_event_listeners(events, stats):
 
 def print_stats(stats, current=True):
     console_logger.info(
-        (" %-" + str(STATS_NAME_WIDTH) + "s %7s %12s  | %7s %7s %7s %7s  | %7s %7s")
-        % ("Name", "# reqs", "# fails", "Avg", "Min", "Max", "Median", "req/s", "failures/s")
+        (
+            f" %-{str(STATS_NAME_WIDTH)}s %7s %12s  | %7s %7s %7s %7s  | %7s %7s"
+            % (
+                "Name",
+                "# reqs",
+                "# fails",
+                "Avg",
+                "Min",
+                "Max",
+                "Median",
+                "req/s",
+                "failures/s",
+            )
+        )
     )
+
     console_logger.info("-" * (80 + STATS_NAME_WIDTH))
     for key in sorted(stats.entries.keys()):
         r = stats.entries[key]
@@ -925,17 +940,20 @@ class StatsCSVFileWriter(StatsCSV):
         self.base_filepath = base_filepath
         self.full_history = full_history
 
-        self.requests_csv_filehandle = open(self.base_filepath + "_stats.csv", "w")
+        self.requests_csv_filehandle = open(f"{self.base_filepath}_stats.csv", "w")
         self.requests_csv_writer = csv.writer(self.requests_csv_filehandle)
 
         self.stats_history_csv_filehandle = open(self.stats_history_file_name(), "w")
         self.stats_history_csv_writer = csv.writer(self.stats_history_csv_filehandle)
 
-        self.failures_csv_filehandle = open(self.base_filepath + "_failures.csv", "w")
+        self.failures_csv_filehandle = open(f"{self.base_filepath}_failures.csv", "w")
         self.failures_csv_writer = csv.writer(self.failures_csv_filehandle)
         self.failures_csv_data_start = 0
 
-        self.exceptions_csv_filehandle = open(self.base_filepath + "_exceptions.csv", "w")
+        self.exceptions_csv_filehandle = open(
+            f"{self.base_filepath}_exceptions.csv", "w"
+        )
+
         self.exceptions_csv_writer = csv.writer(self.exceptions_csv_filehandle)
         self.exceptions_csv_data_start = 0
 
@@ -1013,10 +1031,7 @@ class StatsCSVFileWriter(StatsCSV):
 
         stats = self.environment.stats
         timestamp = int(now)
-        stats_entries = []
-        if self.full_history:
-            stats_entries = sort_stats(stats.entries)
-
+        stats_entries = sort_stats(stats.entries) if self.full_history else []
         for stats_entry in chain(stats_entries, [stats.total]):
             csv_writer.writerow(
                 chain(
@@ -1060,4 +1075,4 @@ class StatsCSVFileWriter(StatsCSV):
         self.exceptions_csv_filehandle.close()
 
     def stats_history_file_name(self):
-        return self.base_filepath + "_stats_history.csv"
+        return f"{self.base_filepath}_stats_history.csv"

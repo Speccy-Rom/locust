@@ -99,7 +99,7 @@ class FastHttpSession:
         if absolute_http_url_regexp.match(path):
             return path
         else:
-            return "%s%s" % (self.base_url, path)
+            return f"{self.base_url}{path}"
 
     def _send_request_safe_mode(self, method, url, **kwargs):
         """
@@ -109,10 +109,7 @@ class FastHttpSession:
         try:
             return self.client.urlopen(url, method=method, **kwargs)
         except FAILURE_EXCEPTIONS as e:
-            if hasattr(e, "response"):
-                r = e.response
-            else:
-                r = ErrorResponse()
+            r = e.response if hasattr(e, "response") else ErrorResponse()
             r.error = e
             return r
 
@@ -222,14 +219,13 @@ class FastHttpSession:
 
         if catch_response:
             return ResponseContextManager(response, environment=self.environment, request_meta=request_meta)
-        else:
-            try:
-                response.raise_for_status()
-            except FAILURE_EXCEPTIONS as e:
-                request_meta["exception"] = e
+        try:
+            response.raise_for_status()
+        except FAILURE_EXCEPTIONS as e:
+            request_meta["exception"] = e
 
-            self.environment.events.request.fire(**request_meta)
-            return response
+        self.environment.events.request.fire(**request_meta)
+        return response
 
     def delete(self, path, **kwargs):
         return self.request("DELETE", path, **kwargs)
@@ -309,7 +305,10 @@ class FastHttpUser(User):
                 "You must specify the base host. Either in the host attribute in the User class, or on the command line using the --host option."
             )
         if not re.match(r"^https?://[^/]+", self.host, re.I):
-            raise LocustError("Invalid host (`%s`), must be a valid base URL. E.g. http://example.com" % self.host)
+            raise LocustError(
+                f"Invalid host (`{self.host}`), must be a valid base URL. E.g. http://example.com"
+            )
+
 
         self.client = FastHttpSession(
             self.environment,
@@ -367,9 +366,7 @@ class FastResponse(CompatResponse):
         return self._response is not None and self._response.get_code() or 0
 
     def _content(self):
-        if self.headers is None:
-            return None
-        return super()._content()
+        return None if self.headers is None else super()._content()
 
 
 class ErrorResponse:
@@ -440,18 +437,15 @@ class ResponseContextManager(FastResponse):
             return exc is None
 
         if exc:
-            if isinstance(value, ResponseError):
-                self.request_meta["exception"] = value
-                self._report_request()
-            else:
+            if not isinstance(value, ResponseError):
                 return False
+            self.request_meta["exception"] = value
         else:
             try:
                 self.raise_for_status()
             except FAILURE_EXCEPTIONS as e:
                 self.request_meta["exception"] = e
-            self._report_request()
-
+        self._report_request()
         return True
 
     def _report_request(self):

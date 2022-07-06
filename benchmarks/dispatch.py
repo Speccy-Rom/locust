@@ -5,6 +5,7 @@ for calculating the distribution of users on each workers. This benchmark is to 
 by people working on Locust's development.
 """
 
+
 import itertools
 import statistics
 import time
@@ -632,8 +633,8 @@ if __name__ == "__main__":
         print()
         print(table)
 
-        with open("results-dispatch-benchmarks-{}.txt".format(int(now)), "wt") as file:
+        with open(f"results-dispatch-benchmarks-{int(now)}.txt", "wt") as file:
             file.write(table.get_string())
 
-        with open("results-dispatch-benchmarks-{}.json".format(int(now)), "wt") as file:
+        with open(f"results-dispatch-benchmarks-{int(now)}.json", "wt") as file:
             file.write(table.get_json_string())
